@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Environment
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Outputs
+outputs/
+!outputs/.gitkeep
+
+# Orthanc persisted local data
+orthanc-storage/
+*.sqlite
+*.db
+*.wal
+*.shm
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+#other files
+*.pt
+*.cmd

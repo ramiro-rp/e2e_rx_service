@@ -1,0 +1,4 @@
+{
+  "threshold": 0.4,
+  "selection_rule": "max_mean_sensitivity_specificity_on_val"
+}
