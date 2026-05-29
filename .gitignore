@@ -13,7 +13,7 @@ env/
 .ipynb_checkpoints/
 
 # Outputs
-outputs/
+outputs/*
 !outputs/.gitkeep
 
 # Orthanc persisted local data
