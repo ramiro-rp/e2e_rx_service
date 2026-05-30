@@ -1,158 +1,120 @@
-# E2E AI Radiology Service
+# RSNA DICOM Service MVP
 
-End-to-end MVP for chest X-ray **pneumonia / lung opacity** analysis with a trained model, a FastAPI runtime service, a Streamlit demo client, Orthanc integration, and OHIF visualization.
+End-to-end service for chest X-ray pneumonia / lung opacity analysis
 
-This repository packages the project as a reproducible system rather than only a notebook experiment. It supports local inference, DICOM-oriented workflows, derived DICOM generation, and viewer-based inspection of studies.
+This repository contains an academic end-to-end MVP that turns a trained chest X-ray classification model into a usable service stack with:
 
-## Project goal
-
-The goal of the project is to turn a notebook-trained chest X-ray classifier into a **defendable end-to-end service pipeline** that can:
-
-- accept imaging inputs,
-- perform backend quality-control checks,
-- run calibrated inference,
-- produce explainability artifacts,
-- generate derived DICOM output for DICOM workflows,
-- integrate with Orthanc,
-- and expose studies through OHIF.
-
-The current implementation is a technical MVP, not a clinical production deployment.
-
-## Current system components
-
-### 1. Backend (`backend/`)
-Authoritative runtime service implemented with FastAPI.
-
-Main responsibilities:
-- local inference for DICOM and standard images,
-- QC gating,
-- structured JSON responses,
-- Grad-CAM artifact generation for positive predictions,
-- derived DICOM generation for DICOM workflows,
+- a training notebook,
+- a FastAPI backend,
+- a Streamlit demo client,
 - Orthanc integration,
-- batch processing of non-analyzed Orthanc studies.
+- and OHIF visualization.
 
-### 2. Streamlit demo client (`frontend-streamlit/`)
-Thin user-facing interface for:
-- uploading local studies,
-- selecting Orthanc studies,
-- launching inference,
-- visualizing returned outputs,
-- storing derived DICOM objects in Orthanc.
-
-Frontend validation is intentionally minimal. The backend remains the authoritative layer.
-
-### 3. Deployment stack (`deployment/`)
-Docker-based local deployment for:
-- Orthanc,
-- OHIF,
-- and supporting viewer-side study inspection.
-
-## Clinical task
-
-Binary chest X-ray decision for:
-
-- **positive** -> findings compatible with *pneumonia / lung opacity*
-- **negative** -> threshold not exceeded for the target class
-
-The project uses a calibrated classification workflow and preserves core study metadata for traceability.
-
-## Key implemented features
-
-- Notebook-trained and exported model artifacts
-- FastAPI backend with structured inference contract
-- DICOM input support
-- Standard image input support (`png`, `jpg`, `jpeg`)
-- DICOM-specific QC and image-specific QC
-- Original Rows/Columns preserved in study metadata
-- Grad-CAM outputs for positive predictions
-- No user-facing Grad-CAM for negative predictions
-- Derived DICOM generation for DICOM workflows
-- Orthanc study listing and single-study analysis
-- Orthanc batch processing for non-analyzed studies
-- OHIF viewer integration through Orthanc
+The project is designed as a reproducible technical pipeline for demonstration, validation, and integration practice. It is not a regulated clinical deployment.
 
 ## Repository structure
 
 ```text
 e2e_rx_service/
 ├─ backend/
-│  ├─ dicom_service/
-│  ├─ shared/
-│  ├─ docs/
-│  ├─ artifacts/
-│  ├─ outputs/
-│  └─ requirements.txt
-├─ frontend-streamlit/
-│  ├─ streamlit_app.py
-│  └─ requirements_streamlit.txt
 ├─ deployment/
-│  ├─ docker-compose.yml
-│  └─ DEPLOYMENT_ORTHANC_OHIF.md
-└─ .gitignore
+├─ frontend-streamlit/
+├─ notebooks/
+│  ├─ rsna_training_pipeline.ipynb
+│  └─ README.md
+└─ README.md
 ```
 
-## Runtime flow
+### Folder roles
 
-### Local inference
-1. User uploads a DICOM or standard image.
-2. Backend performs the appropriate QC branch.
-3. Backend runs calibrated inference.
-4. Backend returns:
-   - QC block,
-   - prediction block,
-   - output URLs,
-   - artifact references.
-5. Streamlit fetches and renders the generated outputs.
+- `backend/`  
+  Runtime inference service, QC logic, artifact loading, Grad-CAM outputs, Orthanc integration, batch processing, and DICOM-derived output handling.
 
-### Orthanc workflow
-1. Streamlit requests the study list from the backend.
-2. Backend queries Orthanc through its REST API.
-3. User selects a study.
-4. Backend downloads the study instance, runs inference, and generates outputs.
-5. For DICOM workflows, a derived DICOM can be stored back into Orthanc.
-6. OHIF can be used to inspect original and derived studies.
+- `frontend-streamlit/`  
+  Thin demo client for local uploads, Orthanc study selection, result rendering, and user-facing interaction with the backend.
+
+- `deployment/`  
+  Local Docker-based stack for Orthanc and OHIF, plus deployment documentation.
+
+- `notebooks/`  
+  Training-side material only: dataset preparation, training, evaluation, calibration, artifact export, and local model sanity-checking.
+
+## Clinical task
+
+Binary chest X-ray prediction for:
+
+- **positive** -> findings compatible with pneumonia / lung opacity
+- **negative** -> no positive decision for the target class
+
+This meaning is used consistently across the training notebook, backend responses, frontend display, and derived DICOM tagging.
+
+## Main implemented features
+
+- ResNet-18 based trained model (`resnet18_rsna`)
+- Training notebook with artifact export
+- FastAPI backend with structured response contract
+- DICOM input support
+- Standard image support (`png`, `jpg`, `jpeg`) as a convenience workflow
+- QC for both DICOM and standard-image branches
+- Original image dimensions preserved in metadata
+- Grad-CAM visual outputs for positive predictions
+- No user-facing Grad-CAM for negative predictions
+- Derived DICOM generation for DICOM workflows
+- Orthanc single-study analysis
+- Orthanc batch processing for non-analyzed studies
+- OHIF viewer integration through Orthanc
+
+## System layers
+
+### Training layer
+Implemented in the notebook:
+- dataset preparation,
+- training,
+- evaluation,
+- calibration,
+- threshold selection,
+- artifact export,
+- local visual sanity-checking.
+
+### Runtime layer
+Implemented in the backend and connected tools:
+- API endpoints,
+- QC response handling,
+- inference service behavior,
+- visual output publishing,
+- Orthanc integration,
+- batch processing,
+- and viewer-facing workflow.
 
 ## Main backend endpoints
 
-- `GET /health`  
-  Service status and supported capabilities.
-
-- `POST /infer`  
-  Local inference for DICOM or standard image input.
-
-- `GET /orthanc/studies`  
-  Returns available Orthanc studies.
-
-- `POST /orthanc/infer`  
-  Runs inference for a selected Orthanc study if it was not already analyzed.
-
-- `POST /orthanc/runs/{run_id}/store-derived`  
-  Stores the derived DICOM for a previous run in Orthanc.
-
-- `POST /orthanc/batch/infer-unprocessed`  
-  Processes all Orthanc studies that do not already contain an AI-derived series.
+- `GET /health`
+- `POST /infer`
+- `GET /orthanc/studies`
+- `POST /orthanc/infer`
+- `POST /orthanc/runs/{run_id}/store-derived`
+- `POST /orthanc/batch/infer-unprocessed`
 
 ## Quick start
 
-### Backend
-From the `backend/` folder:
+### 1. Backend
+From `backend/`:
 
 ```bash
 pip install -r requirements.txt
 py -m uvicorn dicom_service.src.api:app --port 8000
 ```
 
-### Streamlit frontend
-From the `frontend-streamlit/` folder:
+### 2. Streamlit frontend
+From `frontend-streamlit/`:
 
 ```bash
 pip install -r requirements_streamlit.txt
 streamlit run streamlit_app.py
 ```
 
-### Orthanc + OHIF
-From the `deployment/` folder:
+### 3. Orthanc + OHIF
+From `deployment/`:
 
 ```bash
 docker compose down
@@ -165,64 +127,50 @@ Orthanc:
 OHIF:
 - `http://127.0.0.1:8042/ohif/`
 
-See:
-- `deployment/DEPLOYMENT_ORTHANC_OHIF.md`
-
 ## Required local artifacts
 
-The backend expects model artifacts in the configured artifact paths.
+The backend expects the trained artifacts to be available locally, typically:
 
-Typical required files:
+- `best_model.pt`
 - `temperature.json`
 - `threshold.json`
-- model checkpoint(s) placed locally in the expected path
 
-Large checkpoint files are intentionally kept out of the repository and must be provided locally.
+Large model checkpoint files are intentionally kept out of GitHub and must be provided locally.
 
-## Configuration
+## Required documentation inside the repository
 
-The backend uses `.env` loading through `python-dotenv`.
+Primary documentation should include:
 
-Typical configuration areas:
-- artifact paths
-- Orthanc integration
-- service identity / labels
-- runtime behavior
-
-Do not commit:
-- `.env`
-- local outputs
-- Orthanc persistent storage
-- large model checkpoints
-
-## Documentation already included
-
-Technical notes currently available under `backend/docs/` include:
-- architecture
-- functional requirements
-- testing notes
-- deployment notes
-- iteration journal
-
-Deployment notes for Orthanc + OHIF are available in:
+- root `README.md`
+- `deployment/GLOBAL_DEPLOYMENT_GUIDE.md`
 - `deployment/DEPLOYMENT_ORTHANC_OHIF.md`
+- `backend/docs/USER_MANUAL.md`
+- `backend/docs/ADMIN_MANUAL.md`
+- `backend/docs/TRAINING_AND_MODEL.md`
+- `notebooks/README.md`
 
 ## Current limitations
 
-- The main validated route is still the DICOM workflow.
-- Standard image support exists, but is less reliable than the DICOM path.
-- Grad-CAM is a visual explanatory aid, not segmentation.
-- This is an MVP service, not a production-ready regulated clinical system.
-- The project does not yet include full operational hardening, long-term persistence, or asynchronous job orchestration.
+- The main validated path remains the DICOM workflow.
+- Standard image inference is available, but less robust than native DICOM input.
+- Grad-CAM is explanatory visualization, not segmentation.
+- This repository represents a technical MVP, not a clinical production system.
+- Large local artifacts and persistent study storage are intentionally excluded from version control.
 
-## Next documentation steps
+## Naming convention
 
-The next formal documentation block should include:
-- deployment guide,
-- user manual,
-- administrator manual,
-- and final GitHub-facing cleanup of repository instructions.
+Canonical system name:
+- **RSNA DICOM Service MVP**
 
-## License / academic context
+Functional subtitle:
+- **End-to-end service for chest X-ray pneumonia / lung opacity analysis**
 
-This repository is part of an academic project focused on turning a machine-learning model into a working radiology-service pipeline with practical integration layers.
+Notebook filename:
+- **rsna_training_pipeline.ipynb**
+
+Streamlit should be presented as:
+- **RSNA DICOM Service MVP — Demo Client**
+
+## Next documentation step
+
+After repository cleanup and naming alignment, the documentation package should be kept synchronized with any future structural or functional changes.

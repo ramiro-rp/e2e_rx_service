@@ -211,8 +211,11 @@ if 'last_filename' not in st.session_state:
 if 'last_source_mode' not in st.session_state:
     st.session_state.last_source_mode = 'Upload local file'
 
-st.title('Pneumonia / lung opacity detection service')
-st.caption('RSNA Image Client : Simple client for the external FastAPI service and Orthanc integration')
+#st.title('Pneumonia / lung opacity detection service')
+#st.caption('RSNA Image Client : Simple client for the external FastAPI service and Orthanc integration')
+st.set_page_config(page_title='RSNA DICOM Service MVP — Demo Client', page_icon='🩻', layout='centered')
+st.title('RSNA DICOM Service MVP')
+st.caption('Demo client for chest X-ray pneumonia / lung opacity analysis, FastAPI inference, and Orthanc integration')
 
 with st.sidebar:
     st.header('Settings')

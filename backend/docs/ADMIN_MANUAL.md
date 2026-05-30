@@ -2,276 +2,163 @@
 
 ## Purpose
 
-This manual describes how to manage, configure, validate, and troubleshoot the full project stack.
+This manual explains how to operate and maintain the full stack of **RSNA DICOM Service MVP**.
 
-It is intended for the person responsible for:
-- local deployment,
-- environment configuration,
-- runtime checks,
-- and repository-level maintenance.
-
----
+Functional subtitle:
+- **End-to-end service for chest X-ray pneumonia / lung opacity analysis**
 
 ## 1. Managed components
 
-The administrator is responsible for these parts:
+- backend
+- frontend-streamlit
+- deployment stack (Orthanc + OHIF)
+- local artifacts
+- runtime outputs
+- repository hygiene
 
-- FastAPI backend
-- Streamlit frontend
-- Orthanc
-- OHIF
-- local model artifacts
-- deployment configuration
-- local runtime outputs
+## 2. Naming conventions to preserve
 
----
+Canonical service name:
+- **RSNA DICOM Service MVP**
 
-## 2. Repository-level responsibilities
+Functional subtitle:
+- **End-to-end service for chest X-ray pneumonia / lung opacity analysis**
 
-The administrator should maintain a clean repository state.
+Canonical notebook:
+- `notebooks/rsna_training_pipeline.ipynb`
 
-### Do not version
-- `.env`
-- model checkpoint `.pt` files
-- Orthanc persistent storage
-- runtime output folders
-- local `.cmd` launchers if they are only convenience helpers
-- `__pycache__`
+Frontend presentation:
+- **RSNA DICOM Service MVP — Demo Client**
 
-### Keep in Git
-- source code
-- requirements files
-- `.env.example`
-- deployment compose file
-- technical documentation
-- `.gitkeep` for empty runtime output directories
+These names should remain aligned across:
+- documentation,
+- backend configuration,
+- frontend text,
+- and training-side references.
 
----
+## 3. Backend operations
 
-## 3. Backend administration
-
-### Install dependencies
 From `backend/`:
 
 ```powershell
 pip install -r requirements.txt
-```
-
-### Start the backend
-```powershell
 py -m uvicorn dicom_service.src.api:app --port 8000
 ```
 
-### Validate backend readiness
-Open:
-
+Validate:
 ```text
 http://127.0.0.1:8000/health
 ```
 
-Check:
-- model readiness
-- service version
-- Orthanc enabled status
-- supported upload types
+## 4. Frontend operations
 
-### Backend logs
-Use the terminal where `uvicorn` is running. Runtime errors and Orthanc-related failures are written there unless redirected manually.
-
----
-
-## 4. Frontend administration
-
-### Install dependencies
 From `frontend-streamlit/`:
 
 ```powershell
 pip install -r requirements_streamlit.txt
-```
-
-### Start Streamlit
-```powershell
 streamlit run streamlit_app.py
 ```
 
-### Typical frontend URL
-```text
-http://localhost:8501
-```
+## 5. Orthanc + OHIF operations
 
-### Frontend role
-The frontend is a thin client. Do not move business logic from backend to frontend.
-
----
-
-## 5. Orthanc + OHIF administration
-
-### Start stack
 From `deployment/`:
 
 ```powershell
 docker compose down
 docker compose up -d
-```
-
-### Check status
-```powershell
 docker compose ps
 docker compose logs -f
 ```
 
-### URLs
-Orthanc:
-```text
-http://127.0.0.1:8042
-```
+URLs:
+- Orthanc: `http://127.0.0.1:8042`
+- OHIF: `http://127.0.0.1:8042/ohif/`
 
-OHIF:
-```text
-http://127.0.0.1:8042/ohif/
-```
-
-### Important operational note
 Use the OHIF URL with the trailing slash.
 
----
+## 6. Artifact management
 
-## 6. Model artifacts management
-
-The administrator must ensure that required artifacts are present locally.
-
-Typical files:
+Required local artifacts typically include:
 - `temperature.json`
 - `threshold.json`
-- model checkpoint files in the configured artifact path
+- `best_model.pt`
 
-### If the backend reports `model_ready=false`
-Check:
-- file existence
-- configured paths
-- path consistency in `.env`
+The notebook is responsible for producing the artifacts; the backend is responsible for consuming them.
 
----
+If artifacts are missing, validate:
+- local file existence,
+- configured paths,
+- `.env` consistency.
 
-## 7. Environment configuration
+## 7. Notebook role
 
-The backend loads configuration through `.env`.
+The notebook should remain limited to:
+- training,
+- evaluation,
+- calibration,
+- threshold selection,
+- artifact export,
+- local model sanity-checking.
 
-Administrative responsibilities include:
-- maintaining correct artifact paths
-- maintaining Orthanc connection settings
-- ensuring credentials are valid
-- updating service labels consistently
-
-### Do not commit the real `.env`
-Keep a safe `.env.example` in the repository instead.
-
----
+It should not be treated as the runtime service stack.
 
 ## 8. Runtime output management
 
-Backend runs generate outputs under:
-
+Backend outputs are stored under:
 ```text
 backend/outputs/<run_id>/
 ```
 
-These may contain:
-- report JSON
-- images
-- derived DICOM files
+Keep only:
+```text
+backend/outputs/.gitkeep
+```
 
-### Good practice
-- keep `.gitkeep`
-- remove historical runtime outputs from the repository
-- use runtime folders only for local execution and validation
+Do not version real runtime outputs.
 
----
+## 9. Repository hygiene
 
-## 9. Orthanc workflow administration
-
-### Single-study analysis
-The backend blocks duplicate manual analysis when a study already contains an AI-derived series.
-
-### Batch processing
-The batch endpoint:
-- detects already analyzed studies,
-- skips them,
-- processes pending studies only.
-
-### Derived DICOM
-The backend can store a generated derived DICOM back into Orthanc.
-
-Administrative checks:
-- derived series are visible
-- metadata labels are correct
-- batch logic is not duplicating existing studies
-
----
-
-## 10. Typical troubleshooting
-
-### Problem: backend starts but inference fails
-Check:
-- artifact files
-- model path
-- backend terminal logs
-
-### Problem: Orthanc list does not load
-Check:
-- `.env` settings
-- Orthanc credentials
-- Orthanc base URL
-- backend logs
-
-### Problem: OHIF opens blank
-Check:
-- viewer URL with trailing slash
-- Docker logs
-- browser console
-- plugin flags in `docker-compose.yml`
-
-### Problem: already analyzed study cannot be reprocessed
-This is expected behavior in the current design. The system blocks duplicate manual Orthanc analysis.
-
-### Problem: no overlay shown
-For negative predictions, this is expected behavior.
-
----
-
-## 11. Git / repository hygiene
-
-### Before pushing changes
-Check that the repository does not track:
+Do not version:
 - `.env`
 - `.pt`
 - `orthanc-storage/`
 - runtime outputs
-- local convenience scripts if excluded by policy
+- `__pycache__`
+- local convenience launchers if excluded by project policy
 
-### Typical update flow
-```powershell
-git add .
-git status
-git commit -m "Describe the change"
-git push
-```
+## 10. Troubleshooting
 
----
+### Backend starts but inference fails
+Check:
+- artifacts,
+- paths,
+- backend logs.
 
-## 12. Administrative change policy
+### Orthanc listing fails
+Check:
+- backend `.env`,
+- Orthanc URL and credentials,
+- backend logs.
 
-Recommended order when changing the system:
-1. update code or config
-2. validate backend locally
-3. validate frontend locally
+### OHIF opens blank
+Check:
+- URL with trailing slash,
+- Docker logs,
+- browser console.
+
+### Single Orthanc study cannot be reprocessed
+Expected behavior if the study already contains an AI-derived series.
+
+### Overlay missing
+Expected for negative predictions.
+
+## 11. Change procedure
+
+Recommended order for any update:
+1. adjust code or config
+2. validate backend
+3. validate frontend
 4. validate Orthanc integration
 5. validate OHIF
-6. update documentation
-7. push changes to GitHub
-
----
-
-## 13. Scope note
-
-This administrator manual is intended for local technical administration of the academic MVP. It is not a production operations handbook for a regulated medical deployment.
+6. review affected documentation in cascade
+7. commit and push

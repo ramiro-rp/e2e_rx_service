@@ -2,186 +2,108 @@
 
 ## Purpose
 
-This manual describes how to use the project from the user side through the Streamlit demo client and the viewer stack.
+This manual explains how to use **RSNA DICOM Service MVP** from the user side.
 
-The user workflow is intentionally simple:
-- provide a study,
-- request analysis,
-- inspect outputs,
-- optionally store the derived DICOM in Orthanc.
+Functional subtitle:
+- **End-to-end service for chest X-ray pneumonia / lung opacity analysis**
 
----
+Main user-facing interface:
+- **RSNA DICOM Service MVP — Demo Client**
 
-## 1. Main user interfaces
+## 1. Interfaces
 
 ### Streamlit demo client
-Used for:
-- local file upload
-- Orthanc study selection
-- analysis execution
-- result visualization
-- optional derived DICOM storage
+Used to:
+- upload a local DICOM or image,
+- request an Orthanc study list,
+- launch inference,
+- visualize outputs,
+- store derived DICOM in Orthanc when applicable.
 
 ### Orthanc
-Used as:
-- local DICOM repository
-- source of studies for analysis
+Used as the DICOM repository.
 
 ### OHIF
-Used as:
-- viewer for studies stored in Orthanc
-
----
+Used as the viewer for studies stored in Orthanc.
 
 ## 2. Supported input types
-
-The system currently supports:
 
 - DICOM (`.dcm`)
 - PNG (`.png`)
 - JPEG (`.jpg`, `.jpeg`)
 
-### Important
-The main validated workflow is still the DICOM workflow. Standard images are supported as a convenience mode and are less robust than native DICOM input.
+Important:
+- the main validated workflow is the DICOM path,
+- standard images are supported as a convenience workflow.
 
----
+## 3. Local analysis through Streamlit
 
-## 3. Running a local analysis from Streamlit
+1. Open the Streamlit app.
+2. Confirm the backend URL, typically:
+   `http://127.0.0.1:8000`
+3. Select **Upload local file**.
+4. Upload a supported file.
+5. Click **Analyze**.
 
-### Step 1
-Open the Streamlit client in your browser.
+Returned information may include:
+- status,
+- predicted class,
+- probability,
+- confidence,
+- study metadata,
+- visual outputs.
 
-### Step 2
-In the sidebar, confirm the backend URL, usually:
+## 4. Meaning of the prediction
 
-```text
-http://127.0.0.1:8000
-```
-
-### Step 3
-Choose **Upload local file**.
-
-### Step 4
-Upload one of the supported file types.
-
-### Step 5
-Click **Analyze**.
-
-### Expected result
-The system returns:
-- status
-- predicted class
-- probability
-- confidence
-- study metadata
-- visual outputs
-
----
-
-## 4. Understanding the result
-
-### Status
-Typical status values:
-- `ACCEPT`
-- `ACCEPT_WITH_WARNINGS`
-- `REJECT`
-
-### Predicted class
-The UI highlights the class visually.
-
-Meaning:
 - **positive** -> findings compatible with pneumonia / lung opacity
 - **negative** -> no positive decision for the target class
 
-### Study metadata
-The result may include:
-- source type
-- modality
-- original rows
-- original columns
-- photometric interpretation
-
----
+This meaning should remain consistent across backend, frontend, notebook documentation, and repository docs.
 
 ## 5. Visual outputs
 
-### Main visual output
-The main image area shows the original image.
+### Main image
+The frontend shows the original image.
 
-If a transparent visual layer is available, the user can enable the overlay display.
+If a transparent visual artifact exists, the user may enable the overlay view.
 
 ### Additional generated images
-The interface may also display:
+When available, the interface may also show:
 - model input image (`224x224`)
 - heatmap (`224x224`)
 - overlay (`224x224`)
 
-### Important
-For negative predictions, Grad-CAM-based user-facing artifacts are intentionally not shown.
-
----
+For negative predictions, Grad-CAM user-facing visuals are intentionally not generated.
 
 ## 6. Analyzing a study from Orthanc
 
-### Step 1
-Switch source mode to **Select study from Orthanc**.
+1. Switch source mode to **Select study from Orthanc**.
+2. Refresh the study list if needed.
+3. Select a study.
+4. Click **Analyze**.
 
-### Step 2
-Click **Refresh Orthanc study list** if needed.
+If the study already contains an AI-derived series, the system returns a warning and blocks duplicate analysis.
 
-### Step 3
-Choose a study from the list.
-
-### Step 4
-Click **Analyze**.
-
-### Expected result
-The backend:
-- checks whether the study was already analyzed,
-- downloads the study,
-- runs inference if allowed,
-- returns the result to Streamlit.
-
-### If the study was already analyzed
-The interface shows a warning and does not launch a duplicate analysis.
-
----
-
-## 7. Storing a derived DICOM in Orthanc
+## 7. Storing a derived DICOM
 
 This option is available only for DICOM workflows.
 
-### Step 1
-Run an eligible DICOM analysis.
+After a valid DICOM analysis, the user may:
+- download the analyzed DICOM
+- or store the derived DICOM back into Orthanc
 
-### Step 2
-Use:
-- **Download analyzed DICOM** to download the derived file locally
-- or **Store analyzed study in Orthanc** to insert it back into Orthanc
+## 8. Batch processing
 
-### Expected result
-A new derived DICOM series is stored in Orthanc.
+1. Switch to Orthanc mode.
+2. Click **Analyze all pending Orthanc studies**.
 
----
-
-## 8. Running batch analysis for Orthanc studies
-
-### Step 1
-Switch to **Select study from Orthanc**.
-
-### Step 2
-Click **Analyze all pending Orthanc studies**.
-
-### What the system does
 The backend:
-- lists studies,
-- checks which ones already contain an AI-derived series,
-- skips analyzed studies,
-- processes only the pending ones,
-- stores derived DICOM objects back into Orthanc when possible.
+- detects already analyzed studies,
+- skips them,
+- processes pending studies only,
+- stores derived DICOM back into Orthanc when possible.
 
-### What the UI shows
-A summary including:
+The frontend shows:
 - total studies
 - already analyzed
 - processed now
@@ -190,50 +112,18 @@ A summary including:
 - negative cases
 - rejected cases
 
----
-
 ## 9. Viewing studies in OHIF
 
-### Step 1
 Open:
-
 ```text
 http://127.0.0.1:8042/ohif/
 ```
 
-### Step 2
-Authenticate if required.
+Then:
+- authenticate if required,
+- browse studies,
+- open original and derived series.
 
-### Step 3
-Browse studies available in Orthanc.
+## 10. Scope note
 
-### Step 4
-Open the original and derived series for comparison.
-
----
-
-## 10. Common messages
-
-### Inference rejected
-The file did not pass the appropriate QC path.
-
-### Could not load Orthanc studies
-The backend could not communicate with Orthanc or Orthanc integration is disabled.
-
-### Study already contains AI-derived series
-The selected Orthanc study was already analyzed and duplicate analysis is blocked.
-
-### Could not render the main visual output
-The frontend could not fetch or display one of the returned image outputs.
-
----
-
-## 11. Intended use note
-
-This system is an academic technical MVP. It is designed for:
-- demonstration,
-- integration testing,
-- workflow validation,
-- and prototype-level radiology service design.
-
-It is not a regulated diagnostic product.
+This system is an academic technical MVP for demonstration and workflow validation. It is not a regulated diagnostic product.
